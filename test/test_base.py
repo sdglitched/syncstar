@@ -21,22 +21,31 @@ be used or replicated with the express permission of Red Hat, Inc.
 """
 
 
-from click import style
+import subprocess
 
-from syncstar.config import standard
+import pytest
 
-
-def success(message):
-    standard.logger.info(style(message, fg="green", bold=True))
+from syncstar.base import retrieve_disk_size
 
 
-def failure(message):
-    standard.logger.error(style(message, fg="red", bold=True))
-
-
-def warning(message):
-    standard.logger.warning(style(message, fg="yellow", bold=True))
-
-
-def general(message):
-    standard.logger.info(message)
+@pytest.mark.parametrize(
+    "work",
+    [
+        pytest.param(
+            True,
+            id="Function works positively",
+        ),
+        pytest.param(
+            False,
+            id="Function works negatively",
+        )
+    ]
+)
+def test_disk_size(mocker, work):
+    if work:
+        output = b"1024\n512\n256\n128\n128"
+        mocker.patch("subprocess.check_output", return_value=output)
+        assert retrieve_disk_size("/dev/null") == 1024
+    else:
+        mocker.patch("syncstar.base.retrieve_disk_size", side_effect=subprocess.CalledProcessError)
+        assert retrieve_disk_size("/dev/null") == 0
